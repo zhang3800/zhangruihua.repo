@@ -1,0 +1,93 @@
+# 安装s-nail
+yum install -y s-nail
+yum -y install   sysstat
+
+# 配置s-nail
+cat >> ~/.mailrc << EOF
+set from="3638145593@qq.com"
+set mta=smtps://smtp.qq.com:465
+set smtp-auth=login
+set smtp-auth-user=3638145593@qq.com
+set smtp-auth-password=ojpnnpruooyccgjf
+EOF
+
+# 测试发送
+echo "Test" | s-nail -s "Test Subject" 3638145593@qq.com
+
+vim jiankong.sh
+
+#!/bin/bash
+
+# 注意执行此脚本前，需要确保已安装系统光盘中的sysstat的rpm软件包
+
+# 创建monitor用户，重复执行脚本时会出现提示用户已创建的信息，丢弃此信息
+
+
+# 为确保邮件的发出，重启邮件服务器，并将启动信息丢弃
+
+service s-nail  restart &>/dev/null
+
+# 提取性能监控指标（磁盘占用、CPU使用、内存使用）
+
+DUG=$(df -h | grep "/$" | awk '{print $5}' | awk -F% '{print $1}')
+
+CUG=$(expr 100 - $(mpstat | tail -1 | awk '{print $10}' | awk -F. '{print $1}'))
+
+MUG=$(expr $(free | grep "Mem:" | awk '{print $3}') \* 100 / $(free | grep "Mem:" | awk '{print $2}'))
+
+# 设置告警日志文件、告警邮箱
+
+ALOG="/tmp/alert.txt"
+
+AMAIL="3638145593@qq.com"
+
+# 判断是否记录告警
+
+# 为确保有信息，设置磁盘利用率大于10％发出警告信息。
+
+if [ $DUG -gt 2 ]
+
+then
+
+echo "磁盘占用率：$DUG %" >> $ALOG
+
+fi
+
+# 为确保有信息，设置CPU利用率达到（大于等于）2％发出警告信息。
+
+if [ $CUG -ge 2 ]
+
+then
+
+echo "CPU使用率：$CUG %" >> $ALOG
+
+fi
+
+# 为确保有信息，设置内存利用率达到3％发出警告信息。
+
+if [ $MUG -gt 3 ]
+
+then
+
+echo "内存使用率：$MUG %" >> $ALOG
+
+fi
+
+# 判断是否发送告警邮件，最后删除告警日志文件
+
+if [ -f $ALOG ]
+
+then
+
+cat $ALOG |   s-nail  -s "主机出现性能故障!" $AMAIL
+
+rm -rf $ALOG
+
+fi
+
+CRON_JOB="0 * * * * /root/jiankong.sh"
+if ! crontab -l | grep -q "/root/jiankong.sh"; then
+    (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
+fi
+ 
+

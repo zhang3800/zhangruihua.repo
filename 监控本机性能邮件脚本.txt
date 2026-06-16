@@ -1,4 +1,3 @@
-#last_date 2023-08-10
 # 安装s-nail
 yum install -y s-nail
 yum -y install   sysstat

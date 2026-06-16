@@ -1,4 +1,5 @@
 # 安装s-nail
+#666
 yum install -y s-nail
 yum -y install   sysstat
 
